@@ -2,7 +2,7 @@
 FROM python:3.12-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 && rm -rf /var/lib/apt/lists/*
-RUN useradd -m app
+RUN useradd -m -u 1000 app && mkdir -p /home/app/batchsleuth && chown app:app /home/app/batchsleuth
 WORKDIR /home/app/batchsleuth
 COPY --chown=app pyproject.toml README.md ./
 COPY --chown=app batchsleuth ./batchsleuth

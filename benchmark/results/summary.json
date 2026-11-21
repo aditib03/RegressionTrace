@@ -1,0 +1,138 @@
+{
+  "quick": false,
+  "n_scenarios": 135,
+  "n_regressed": 85,
+  "wall_clock_s": 2259.093085050583,
+  "n_jobs": 4,
+  "machine": "arm64 / Darwin",
+  "localization": {
+    "combined (BatchSleuth)": {
+      "p@k": 0.9471604938271605,
+      "ap": 0.9597199445859004
+    },
+    "influence only": {
+      "p@k": 0.8814814814814815,
+      "ap": 0.904509436552544
+    },
+    "label quality only": {
+      "p@k": 0.5061728395061728,
+      "ap": 0.5587638898036889
+    },
+    "validation (out-of-range) only": {
+      "p@k": 0.42716049382716054,
+      "ap": 0.45783273212156644
+    },
+    "PSI drift only": {
+      "p@k": 0.08246913580246913,
+      "ap": 0.1467460785155256
+    },
+    "loss-only baseline": {
+      "p@k": 0.8508641975308643,
+      "ap": 0.8762807213991963
+    },
+    "random": {
+      "p@k": 0.034567901234567905,
+      "ap": 0.07392089618794849
+    }
+  },
+  "localization_by_fault": {
+    "class_flip": {
+      "combined (BatchSleuth)": 0.914,
+      "influence only": 0.941,
+      "label quality only": 0.785,
+      "validation (out-of-range) only": 0.04,
+      "PSI drift only": 0.027,
+      "loss-only baseline": 0.906,
+      "random": 0.027
+    },
+    "feature_shuffle": {
+      "combined (BatchSleuth)": 0.822,
+      "influence only": 0.84,
+      "label quality only": 0.657,
+      "validation (out-of-range) only": 0.074,
+      "PSI drift only": 0.0,
+      "loss-only baseline": 0.84,
+      "random": 0.015
+    },
+    "label_flip": {
+      "combined (BatchSleuth)": 1.0,
+      "influence only": 1.0,
+      "label quality only": 0.936,
+      "validation (out-of-range) only": 0.022,
+      "PSI drift only": 0.015,
+      "loss-only baseline": 0.993,
+      "random": 0.064
+    },
+    "missing_burst": {
+      "combined (BatchSleuth)": 1.0,
+      "influence only": 0.699,
+      "label quality only": 0.035,
+      "validation (out-of-range) only": 1.0,
+      "PSI drift only": 0.212,
+      "loss-only baseline": 0.719,
+      "random": 0.03
+    },
+    "unit_change": {
+      "combined (BatchSleuth)": 1.0,
+      "influence only": 0.928,
+      "label quality only": 0.119,
+      "validation (out-of-range) only": 1.0,
+      "PSI drift only": 0.158,
+      "loss-only baseline": 0.798,
+      "random": 0.037
+    }
+  },
+  "recovery": {
+    "drop": {
+      "median_recovery": 0.7927823520463191,
+      "mean_recovery": 0.771524341658828
+    },
+    "relabel": {
+      "median_recovery": 0.5081578341475618,
+      "mean_recovery": 0.37982489203668235
+    },
+    "reweight": {
+      "median_recovery": 0.5876932033990511,
+      "mean_recovery": 0.5532964045708123
+    },
+    "oracle drop": {
+      "median_recovery": 0.8422311834870622,
+      "mean_recovery": 0.8094748256609523
+    }
+  },
+  "suspects": {
+    "precision": 0.987007874015748,
+    "recall": 0.9076543209876543,
+    "mean_n": 2.740740740740741
+  },
+  "gate": {
+    "block_rate_corrupt_all": 0.37777777777777777,
+    "block_rate_corrupt_gap>=0.004": 1.0,
+    "n_gap>=0.004": 14,
+    "pass_rate_repaired_drop": 0.8941176470588236,
+    "false_block_rate_clean_controls": 0.06666666666666665,
+    "n_controls": 15
+  },
+  "overhead": {
+    "mean_diagnose_s": 2.688113036468254,
+    "mean_train_s": 0.47057737500290386,
+    "mean_influence_s": 1.4706318762088713
+  },
+  "lobo": {
+    "n": 10,
+    "mean_spearman": 0.05864866486648664,
+    "mean_pearson": 0.10758641181271993,
+    "mean_lobo_s": 62.911767341804804,
+    "mean_influence_s": 1.443266691698227,
+    "speedup_influence_vs_lobo": 43.58984219872722,
+    "speedup_full_diagnosis_vs_lobo": 23.908691138159067,
+    "p@k_exact_lobo": 0.13333333333333333,
+    "p@k_influence": 0.8666666666666668,
+    "p@k_combined": 1.0,
+    "lobo_bad_mean": -0.0005398971329811004,
+    "lobo_clean_sd": 0.0010691248657696462,
+    "lobo_snr": 0.5148873061152586,
+    "infl_snr": 14.250920212835231,
+    "sign_agree_bad": 0.5333333333333333
+  }
+}

@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BatchSleuth</title>
+<meta name="description" content="Trace ML model regressions to the training-data batches that caused them, test repairs counterfactually, and promote only safe models.">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #fcfcfb; --surface: #ffffff; --surface-2: #f4f3f0; --border: #e4e2dc;
+  --text: #0b0b0b; --text-2: #52514e; --muted: #77756f;
+  --series-1: #2a78d6; --series-1-soft: #cde2fb; --neutral-bar: #8f8d86;
+  --good: #0ca30c; --good-text: #006300; --critical: #d03b3b; --critical-text: #b42f2f;
+  --seq-0: #f4f3f0; --seq-1: #cde2fb; --seq-2: #9ec5f4; --seq-3: #6da7ec; --seq-4: #3987e5; --seq-5: #256abf; --seq-6: #184f95;
+  --code-bg: #f4f3f0; --shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #121211; --surface: #1a1a19; --surface-2: #232321; --border: #33332f;
+    --text: #f0efec; --text-2: #c3c2b7; --muted: #9b9a92;
+    --series-1: #3987e5; --series-1-soft: #1d3554; --neutral-bar: #76756f;
+    --good: #0ca30c; --good-text: #4cc94c; --critical: #e66767; --critical-text: #ef8a8a;
+    --seq-0: #232321; --seq-1: #104281; --seq-2: #184f95; --seq-3: #1c5cab; --seq-4: #256abf; --seq-5: #3987e5; --seq-6: #6da7ec;
+    --code-bg: #232321; --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #121211; --surface: #1a1a19; --surface-2: #232321; --border: #33332f;
+  --text: #f0efec; --text-2: #c3c2b7; --muted: #9b9a92;
+  --series-1: #3987e5; --series-1-soft: #1d3554; --neutral-bar: #76756f;
+  --good: #0ca30c; --good-text: #4cc94c; --critical: #e66767; --critical-text: #ef8a8a;
+  --seq-0: #232321; --seq-1: #104281; --seq-2: #184f95; --seq-3: #1c5cab; --seq-4: #256abf; --seq-5: #3987e5; --seq-6: #6da7ec;
+  --code-bg: #232321; --shadow: none;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+}
+a { color: var(--series-1); }
+code, pre, .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+.wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+header.hero { padding: 56px 0 28px; }
+.eyebrow { color: var(--muted); font-size: 13px; letter-spacing: .02em; }
+h1 { font-size: clamp(30px, 5vw, 44px); line-height: 1.1; margin: 6px 0 12px; letter-spacing: -.02em; }
+h2 { font-size: 24px; margin: 0 0 6px; letter-spacing: -.01em; }
+h3 { font-size: 16px; margin: 0 0 6px; }
+.lede { font-size: 18px; color: var(--text-2); max-width: 720px; margin: 0; }
+.btns { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text); text-decoration: none; font-weight: 500; }
+.btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.stack { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
+.tag { font-size: 12px; padding: 3px 8px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); }
+section { padding: 36px 0; border-top: 1px solid var(--border); }
+.sub { color: var(--text-2); margin: 0 0 20px; max-width: 760px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+.tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); }
+.tile .num { font-size: 34px; font-weight: 650; letter-spacing: -.02em; line-height: 1.1; }
+.tile .lbl { color: var(--text-2); font-size: 13px; margin-top: 4px; }
+.tile .cmp { color: var(--muted); font-size: 12px; margin-top: 6px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px; box-shadow: var(--shadow); }
+.steps { display: grid; gap: 16px; }
+.steps > *, .grid2 > *, .tiles > *, .how > * { min-width: 0; }
+body { overflow-x: hidden; }
+.step-h { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.step-n { font-size: 12px; font-weight: 600; color: var(--muted); }
+.badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 3px 9px;
+  border-radius: 999px; border: 1px solid currentColor; }
+.badge.good { color: var(--good-text); } .badge.bad { color: var(--critical-text); }
+.badge .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.checks { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.checks li { display: grid; grid-template-columns: 58px 130px 1fr; gap: 10px; align-items: baseline; font-size: 13px; }
+.st { font-weight: 700; font-size: 12px; }
+.st.ok { color: var(--good-text); } .st.fail { color: var(--critical-text); }
+.checks .name { font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: var(--text-2); }
+.checks .detail { color: var(--text-2); }
+@media (max-width: 640px) { .checks li { grid-template-columns: 52px 1fr; } .checks .detail { grid-column: 1 / -1; padding-left: 62px; margin-top: -4px; } }
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th { text-align: left; font-weight: 600; color: var(--text-2); padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tr.truth td { background: color-mix(in srgb, var(--series-1) 7%, transparent); }
+.scorebar { display: flex; align-items: center; gap: 8px; min-width: 150px; }
+.scorebar .track { flex: 1; height: 8px; position: relative; }
+.scorebar .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--series-1); border-radius: 0 4px 4px 0; }
+.scorebar .fill.low { background: var(--neutral-bar); }
+.thr { position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 1.5px dashed var(--muted); }
+.why { color: var(--text-2); min-width: 240px; }
+.truthcell { white-space: nowrap; font-size: 12px; }
+.truthcell .hidden { color: var(--muted); }
+.toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; user-select: none;
+  padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); }
+.row-between { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 14px; font-size: 13px; }
+.kv dt { color: var(--muted); } .kv dd { margin: 0; overflow-wrap: anywhere; }
+/* charts */
+.chart-title { font-weight: 600; margin: 0 0 2px; }
+.chart-sub { color: var(--muted); font-size: 12px; margin: 0 0 14px; }
+.hbars { display: grid; gap: 8px; }
+.hbar { display: grid; grid-template-columns: minmax(120px, 220px) 1fr 52px; gap: 10px; align-items: center; font-size: 13px; }
+.hbar .lab { color: var(--text-2); text-align: right; }
+.hbar .lab.hl { color: var(--text); font-weight: 600; }
+.hbar .track { position: relative; height: 18px; }
+.hbar .bar { position: absolute; left: 0; top: 2px; bottom: 2px; border-radius: 0 4px 4px 0; background: var(--neutral-bar); }
+.hbar .bar.hl { background: var(--series-1); }
+.hbar .val { font-variant-numeric: tabular-nums; color: var(--text); }
+.hbar .hit { position: absolute; inset: -4px 0; cursor: default; }
+.hbar:hover .bar { filter: brightness(1.08); }
+.axis { display: grid; grid-template-columns: minmax(120px, 220px) 1fr 52px; gap: 10px; font-size: 11px; color: var(--muted); margin-top: 4px; }
+.axis .ticks { display: flex; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 3px; }
+@media (max-width: 560px) { .hbar, .axis { grid-template-columns: 110px 1fr 44px; } }
+.heat td.cell { text-align: center; font-variant-numeric: tabular-nums; min-width: 64px; }
+.heat td.cell.dark { color: #fff; }
+.heat th.rot { white-space: normal; min-width: 72px; font-size: 12px; vertical-align: bottom; }
+.legend { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); margin-top: 10px; flex-wrap: wrap; }
+.legend .sw { display: inline-block; width: 18px; height: 10px; border-radius: 2px; }
+.seqlegend { display: inline-flex; height: 10px; width: 140px; border-radius: 2px; overflow: hidden; }
+.seqlegend span { flex: 1; }
+details.tv { margin-top: 12px; font-size: 13px; }
+details.tv summary { cursor: pointer; color: var(--text-2); }
+.tip { position: fixed; pointer-events: none; z-index: 10; background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.12);
+  opacity: 0; transition: opacity .08s; max-width: 260px; }
+.tip b { font-weight: 600; }
+.finding { border-left: 3px solid var(--series-1); padding: 2px 0 2px 14px; margin: 14px 0; color: var(--text-2); }
+.finding strong { color: var(--text); }
+.how { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.how .card p { margin: 0; color: var(--text-2); font-size: 14px; }
+pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; overflow-x: auto; margin: 0; line-height: 1.6; }
+.c { color: var(--muted); }
+footer { padding: 28px 0 48px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--border); }
+.themebtn { position: absolute; top: 16px; right: 16px; }
+.note { color: var(--muted); font-size: 12px; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="wrap" style="position:relative">
+  <button class="toggle themebtn" id="themeBtn" aria-label="Toggle color theme">◐ Theme</button>
+  <header class="hero">
+    <div class="eyebrow">ML reliability · open source</div>
+    <h1>BatchSleuth</h1>
+    <p class="lede">When a retrained model gets worse, BatchSleuth traces the regression to the training-data
+      <em>batches</em> that caused it, tests repairs counterfactually, and promotes a model only if it passes safeguards.</p>
+    <div class="btns">
+      <a class="btn primary" href="https://github.com/aditib03/batchsleuth">View source on GitHub</a>
+      <a class="btn" href="#demo">See a regression traced</a>
+      <a class="btn" href="#run">Run it yourself</a>
+    </div>
+    <div class="stack">
+      <span class="tag">Python</span><span class="tag">LightGBM</span><span class="tag">DuckDB</span>
+      <span class="tag">MLflow</span><span class="tag">FastAPI</span><span class="tag">influence estimation</span><span class="tag">confident learning</span>
+    </div>
+  </header>
+
+  <div id="tiles" class="tiles" style="margin-bottom:36px"></div>
+
+  <section id="demo">
+    <h2>A regression, traced end to end</h2>
+    <p class="sub" id="demoSub">Real output from <code>make demo</code>.</p>
+    <div class="steps">
+      <div class="card">
+        <div class="step-h"><span class="step-n">STEP 1</span><h3>The refreshed model is blocked</h3><span id="refreshBadge"></span></div>
+        <p class="sub" style="margin-bottom:12px">The champion was trained on 80 historical batches. A refresh adds 20 new daily batches; the promotion gate compares it with the champion on a holdout slice that diagnosis never sees.</p>
+        <ul class="checks" id="refreshChecks"></ul>
+      </div>
+
+      <div class="card">
+        <div class="row-between">
+          <div class="step-h" style="margin:0"><span class="step-n">STEP 2</span><h3>Diagnosis: which batches did this?</h3></div>
+          <button class="toggle" id="truthBtn" aria-pressed="false">Reveal injected faults</button>
+        </div>
+        <p class="sub" style="margin-bottom:12px" id="diagSub"></p>
+        <div class="table-wrap"><table id="diagTable"></table></div>
+        <div class="legend"><span class="sw" style="background:var(--series-1)"></span>above suspicion threshold
+          <span class="sw" style="background:var(--neutral-bar);margin-left:10px"></span>below
+          <span style="display:inline-block;width:14px;border-left:1.5px dashed var(--muted);height:12px;margin-left:10px"></span>threshold = 6</div>
+      </div>
+
+      <div class="card">
+        <div class="step-h"><span class="step-n">STEP 3</span><h3>Counterfactual repairs, each checked by the gate</h3></div>
+        <p class="sub" style="margin-bottom:14px">Each repair creates a new dataset version (with lineage to its parent), retrains the model, and is evaluated by the same safeguards.</p>
+        <div class="grid2" id="repairs"></div>
+      </div>
+
+      <div class="card">
+        <div class="step-h"><span class="step-n">STEP 4</span><h3>Promoted, with provenance</h3><span id="promoBadge"></span></div>
+        <p class="sub" style="margin-bottom:12px">Every batch is content-hashed in DuckDB, and every dataset version is content-addressed, so any model can be traced back to the exact rows it saw.</p>
+        <dl class="kv" id="prov"></dl>
+      </div>
+    </div>
+  </section>
+
+  <section id="bench">
+    <h2>Fault-injection benchmark</h2>
+    <p class="sub" id="benchSub"></p>
+    <div class="steps">
+      <div class="card">
+        <p class="chart-title">Which batches are corrupted?</p>
+        <p class="chart-sub">precision@k, where k = number of corrupted batches; mean over all scenarios. Higher is better.</p>
+        <div class="hbars" id="locChart"></div>
+        <div class="axis"><span></span><div class="ticks"><span>0</span><span>0.25</span><span>0.5</span><span>0.75</span><span>1</span></div><span></span></div>
+        <details class="tv"><summary>Show as table</summary><div class="table-wrap"><table id="locTable"></table></div></details>
+      </div>
+      <div class="card">
+        <p class="chart-title">precision@k by fault type</p>
+        <p class="chart-sub">Different signals catch different bugs; the combined score is what stays reliable across all of them.</p>
+        <div class="table-wrap"><table class="heat" id="heat"></table></div>
+        <div class="legend">0 <span class="seqlegend"><span style="background:var(--seq-0)"></span><span style="background:var(--seq-1)"></span><span style="background:var(--seq-2)"></span><span style="background:var(--seq-3)"></span><span style="background:var(--seq-4)"></span><span style="background:var(--seq-5)"></span><span style="background:var(--seq-6)"></span></span> 1</div>
+      </div>
+      <div class="grid2">
+        <div class="card">
+          <p class="chart-title">How much of the regression does a repair undo?</p>
+          <p class="chart-sub">Median recovery of the log-loss regression, auto-selected suspects. The oracle drops exactly the corrupted batches.</p>
+          <div class="hbars" id="recChart"></div>
+          <div class="axis"><span></span><div class="ticks"><span>0%</span><span>50%</span><span>100%</span></div><span></span></div>
+          <details class="tv"><summary>Show as table</summary><div class="table-wrap"><table id="recTable"></table></div></details>
+        </div>
+        <div class="card">
+          <p class="chart-title">Promotion gate and cost</p>
+          <p class="chart-sub">Does the gate stop bad models without blocking good ones, and what does diagnosis cost?</p>
+          <dl class="kv" id="gateKv"></dl>
+        </div>
+      </div>
+      <div class="card" id="findings"></div>
+    </div>
+  </section>
+
+  <section id="how">
+    <h2>How it works</h2>
+    <p class="sub">Three independent signals, combined with robust z-scores. Each catches bugs the others miss.</p>
+    <div class="how">
+      <div class="card"><h3>Influence for boosted trees</h3><p>LightGBM isn't differentiable, so it uses a leaf-local, BoostIn-style approximation: replay the boosting trajectory and measure how up-weighting each row moves its leaf values, and thereby the evaluation loss. The replay reproduces LightGBM's own leaf values to within 1e-8.</p></div>
+      <div class="card"><h3>Label quality</h3><p>Confident learning on 3-fold out-of-fold probabilities flags rows whose label the model confidently contradicts. The batch score is the fraction of flagged rows.</p></div>
+      <div class="card"><h3>Data validation</h3><p>Share of rows with values outside the trusted reference range catches zero-fills, sentinels and unit changes. PSI drift is shown in explanations but kept out of the score: natural source-to-source drift makes it fire on clean batches.</p></div>
+      <div class="card"><h3>Safeguarded promotion</h3><p>AUC non-inferiority (paired bootstrap CI), log-loss, calibration, worst-slice AUC, and a cap on data removed. Every model is an MLflow run tagged with its DuckDB dataset version.</p></div>
+    </div>
+  </section>
+
+  <section id="run">
+    <h2>Run it yourself</h2>
+    <p class="sub">Runs on a laptop: about 1.2 GB peak RAM, 4 CPU threads, and around 25 MB of data. No GPU or cloud needed.</p>
+<pre><span class="c"># clone, install into a local virtualenv, run the full story (~40 s)</span>
+git clone https://github.com/aditib03/batchsleuth.git && cd batchsleuth
+make setup
+make demo
+<span class="c"># interactive API docs at http://127.0.0.1:8000/docs</span>
+make serve
+<span class="c"># reproduce the benchmark on this page</span>
+make bench</pre>
+  </section>
+</div>
+<footer><div class="wrap">BatchSleuth · MIT licensed · Numbers on this page are loaded from <a href="data/demo.json">demo.json</a> and <a href="data/benchmark.json">benchmark.json</a>, produced by <code>scripts/export_site.py</code>.</div></footer>
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script>
+(() => {
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const pct = (x, d = 0) => (x * 100).toFixed(d) + "%";
+  const THRESH = 6;
+
+  // theme toggle (per-viewer convenience; storage optional)
+  const root = document.documentElement;
+  try { const t = localStorage.getItem("bs-theme"); if (t) root.dataset.theme = t; } catch (e) {}
+  const qt = new URLSearchParams(location.search).get("theme"); if (qt === "light" || qt === "dark") root.dataset.theme = qt;
+  $("#themeBtn").onclick = () => {
+    const dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+    root.dataset.theme = dark ? "light" : "dark";
+    try { localStorage.setItem("bs-theme", root.dataset.theme); } catch (e) {}
+  };
+
+  // tooltip
+  const tip = $("#tip");
+  function bindTip(el, html) {
+    el.addEventListener("mousemove", (e) => {
+      tip.innerHTML = html; tip.style.opacity = 1;
+      const w = tip.offsetWidth, x = Math.min(e.clientX + 14, innerWidth - w - 8);
+      tip.style.left = x + "px"; tip.style.top = (e.clientY + 14) + "px";
+    });
+    el.addEventListener("mouseleave", () => (tip.style.opacity = 0));
+  }
+
+  const badge = (ok, okText, badText) =>
+    `<span class="badge ${ok ? "good" : "bad"}">${ok ? "✓ " + okText : "✕ " + badText}</span>`;
+  const checks = (list) => list.map((c) =>
+    `<li><span class="st ${c.passed ? "ok" : "fail"}">${c.passed ? "✓ PASS" : "✕ FAIL"}</span>` +
+    `<span class="name">${esc(c.name)}</span><span class="detail">${esc(c.detail)}</span></li>`).join("");
+
+  function renderDemo(d) {
+    $("#demoSub").innerHTML = `Real output from <code>make demo</code> on UCI Covertype: ${d.n_batches} batches of ${d.rows_per_batch.toLocaleString()} rows. ` +
+      `Five of the 20 new batches carry injected pipeline bugs that diagnosis never sees.`;
+    $("#refreshBadge").innerHTML = badge(d.refresh_gate.passed, "PROMOTION ALLOWED", "PROMOTION BLOCKED");
+    $("#refreshChecks").innerHTML = checks(d.refresh_gate.checks);
+
+    const truth = Object.fromEntries(d.injected_faults.map((f) => [f.batch_id, f]));
+    const dg = d.diagnosis;
+    $("#diagSub").textContent = `Ranked in ${dg.timings_s.total_s.toFixed(1)} s. Suspects above the threshold: ${dg.suspects.join(", ")}.`;
+    const max = Math.max(...dg.batches.map((b) => b.score));
+    let reveal = false;
+    function drawDiag() {
+      const rows = dg.batches.map((b) => {
+        const f = truth[b.batch], w = (b.score / max) * 100, t = (THRESH / max) * 100;
+        const truthCell = reveal ? (f ? `<b>${esc(f.fault.replace("_", " "))}</b> (${esc(f.severity)})` : `<span class="hidden">clean</span>`) : `<span class="hidden">hidden</span>`;
+        return `<tr class="${reveal && f ? "truth" : ""}">
+          <td class="num mono">${b.batch}</td>
+          <td><div class="scorebar"><div class="track"><div class="fill ${b.score >= THRESH ? "" : "low"}" style="width:${Math.max(w, 1)}%"></div><div class="thr" style="left:${t}%"></div></div><span class="mono">${b.score.toFixed(1)}</span></div></td>
+          <td class="num mono">${b.z_influence.toFixed(1)}</td><td class="num mono">${b.z_label_quality.toFixed(1)}</td><td class="num mono">${b.z_validation.toFixed(1)}</td>
+          <td class="why">${esc(b.explanation)}</td><td class="truthcell">${truthCell}</td></tr>`;
+      }).join("");
+      $("#diagTable").innerHTML = `<thead><tr><th class="num">batch</th><th>suspicion score</th><th class="num">influence z</th><th class="num">label z</th><th class="num">validation z</th><th>explanation</th><th>ground truth</th></tr></thead><tbody>${rows}</tbody>`;
+    }
+    drawDiag();
+    $("#truthBtn").onclick = () => {
+      reveal = !reveal; drawDiag();
+      $("#truthBtn").textContent = reveal ? "Hide injected faults" : "Reveal injected faults";
+      $("#truthBtn").setAttribute("aria-pressed", reveal);
+    };
+
+    const why = { relabel: "Flips likely-mislabelled rows inside the suspect batches. It can't undo zero-filled or misaligned features.",
+                  drop: "Excludes the suspect batches entirely from the new dataset version." };
+    $("#repairs").innerHTML = ["relabel", "drop"].map((a) => {
+      const r = d.repairs[a];
+      return `<div class="card" style="box-shadow:none;background:var(--surface-2)">
+        <div class="step-h"><h3 class="mono">repair --action ${a}</h3>${badge(r.gate.passed, "ALLOWED", "BLOCKED")}</div>
+        <p class="note" style="margin:0 0 10px">${why[a]} Changed ${r.changed_rows.toLocaleString()} rows; removed ${pct(r.removed_frac, 1)} of training data.</p>
+        <ul class="checks">${checks(r.gate.checks)}</ul></div>`;
+    }).join("");
+
+    $("#promoBadge").innerHTML = badge(d.promoted, "NEW CHAMPION", "NOT PROMOTED");
+    const p = d.provenance_example;
+    $("#prov").innerHTML = `<dt>example batch</dt><dd class="mono">${p.batch_id} (${esc(p.source)}, ${p.row_count.toLocaleString()} rows)</dd>
+      <dt>content sha256</dt><dd class="mono">${esc(p.content_sha256)}</dd>
+      <dt>re-hashed now</dt><dd>${badge(p.hash_verified, "matches stored hash", "MISMATCH")}</dd>
+      <dt>used by versions</dt><dd class="mono">${p.versions.map(esc).join(", ")}</dd>
+      <dt>all versions</dt><dd>${d.versions.map((v) => `<span class="mono">${esc(v.version_id)}</span> ${esc(v.note)}`).join("<br>")}</dd>`;
+  }
+
+  function hbars(el, items, max, fmt, tipFn) {
+    el.innerHTML = "";
+    items.forEach((it) => {
+      const row = document.createElement("div");
+      row.className = "hbar";
+      row.innerHTML = `<span class="lab ${it.hl ? "hl" : ""}">${esc(it.label)}</span>
+        <div class="track"><div class="bar ${it.hl ? "hl" : ""}" style="width:${Math.max(0, it.value / max) * 100}%"></div><div class="hit"></div></div>
+        <span class="val mono">${fmt(it.value)}</span>`;
+      el.appendChild(row);
+      bindTip(row, tipFn(it));
+    });
+  }
+
+  function renderBench(s) {
+    const lb = s.lobo || {};
+    $("#benchSub").innerHTML = `${s.n_scenarios} scenarios: 5 fault types × 3 severities (5%, 15% or 40% of a batch's rows) × 1, 3 or 5 corrupted batches out of 100 × 3 seeds. ` +
+      `Batches are deliberately non-i.i.d., so clean batches differ from each other the way real data sources do. Reproduce with <code>make bench</code>.`;
+
+    const loc = s.localization;
+    const names = Object.keys(loc).sort((a, b) => loc[b]["p@k"] - loc[a]["p@k"]);
+    hbars($("#locChart"), names.map((n) => ({ label: n, value: loc[n]["p@k"], ap: loc[n].ap, hl: n.startsWith("combined") })),
+      1, (v) => v.toFixed(2), (it) => `<b>${esc(it.label)}</b><br>precision@k ${it.value.toFixed(3)}<br>average precision ${it.ap.toFixed(3)}`);
+    $("#locTable").innerHTML = `<thead><tr><th>method</th><th class="num">precision@k</th><th class="num">avg precision</th></tr></thead><tbody>` +
+      names.map((n) => `<tr><td>${esc(n)}</td><td class="num">${loc[n]["p@k"].toFixed(3)}</td><td class="num">${loc[n].ap.toFixed(3)}</td></tr>`).join("") + "</tbody>";
+
+    const bf = s.localization_by_fault, faults = Object.keys(bf), methods = names;
+    const step = (v) => Math.min(6, Math.round(v * 6));
+    $("#heat").innerHTML = `<thead><tr><th>fault</th>${methods.map((m) => `<th class="rot">${esc(m)}</th>`).join("")}</tr></thead><tbody>` +
+      faults.map((f) => `<tr><td>${esc(f.replace("_", " "))}</td>${methods.map((m) => {
+        const v = bf[f][m], k = step(v);
+        return `<td class="cell ${k >= 4 ? "dark" : ""}" style="background:var(--seq-${k})" title="${esc(m)} on ${esc(f)}: ${v.toFixed(2)}">${v.toFixed(2)}</td>`;
+      }).join("")}</tr>`).join("") + "</tbody>";
+
+    const rec = s.recovery, acts = Object.keys(rec);
+    hbars($("#recChart"), acts.map((a) => ({ label: a, value: rec[a].median_recovery, mean: rec[a].mean_recovery, hl: a !== "oracle drop" })),
+      1, (v) => pct(v), (it) => `<b>${esc(it.label)}</b><br>median recovery ${pct(it.value)}<br>mean (clipped) ${pct(it.mean)}`);
+    $("#recTable").innerHTML = `<thead><tr><th>repair</th><th class="num">median</th><th class="num">mean (clipped)</th></tr></thead><tbody>` +
+      acts.map((a) => `<tr><td>${esc(a)}</td><td class="num">${pct(rec[a].median_recovery)}</td><td class="num">${pct(rec[a].mean_recovery)}</td></tr>`).join("") + "</tbody>";
+
+    const g = s.gate, o = s.overhead;
+    $("#gateKv").innerHTML = `
+      <dt>blocks big regressions</dt><dd><b>${pct(g["block_rate_corrupt_gap>=0.004"])}</b> of corrupted models with log-loss regression ≥ 0.004 (n=${g["n_gap>=0.004"]})</dd>
+      <dt>blocks any corruption</dt><dd>${pct(g.block_rate_corrupt_all)} of all corrupted models (many low-severity faults barely hurt)</dd>
+      <dt>false blocks</dt><dd><b>${pct(g.false_block_rate_clean_controls)}</b> of clean control models (n=${g.n_controls})</dd>
+      <dt>passes repaired</dt><dd>${pct(g.pass_rate_repaired_drop)} of drop-repaired models</dd>
+      <dt>suspect selection</dt><dd>precision ${s.suspects.precision.toFixed(2)}, recall ${s.suspects.recall.toFixed(2)}</dd>
+      <dt>full diagnosis</dt><dd>${o.mean_diagnose_s.toFixed(1)} s (influence alone ${o.mean_influence_s.toFixed(1)} s; one training run ${o.mean_train_s.toFixed(1)} s)</dd>
+      ${lb.mean_lobo_s ? `<dt>exact retraining</dt><dd>${lb.mean_lobo_s.toFixed(0)} s for leave-one-batch-out (100 retrains): diagnosis is <b>${lb.speedup_full_diagnosis_vs_lobo.toFixed(0)}× faster</b></dd>` : ""}`;
+
+    const loss = loc["loss-only baseline"], comb = loc[names.find((n) => n.startsWith("combined"))], psi = loc["PSI drift only"];
+    $("#findings").innerHTML = `<p class="chart-title">Honest findings</p>
+      <p class="finding"><strong>A naive baseline is strong.</strong> Ranking batches by mean training loss reaches precision@k ${loss["p@k"].toFixed(2)} against ${comb["p@k"].toFixed(2)} for the combined score. Most injected bugs raise in-sample loss, and the benchmark reports that comparison rather than hiding it.</p>
+      <p class="finding"><strong>Distribution drift is a trap.</strong> PSI alone scores ${psi["p@k"].toFixed(2)}: when batches naturally come from different sources, drift fires on clean data. That is why it explains results but isn't part of the score.</p>
+      ${lb.n ? `<p class="finding"><strong>Exact leave-one-batch-out is a noisy reference for boosted trees.</strong> Removing one corrupted batch changes eval log-loss by ${lb.lobo_bad_mean.toExponential(1)}, against a spread of ${lb.lobo_clean_sd.toExponential(1)} from removing clean batches (signal-to-noise ${lb.lobo_snr.toFixed(1)}), because a single retrain mostly reshuffles tree structure. Exact retraining found the corrupted batches with precision@k ${lb["p@k_exact_lobo"].toFixed(2)}; influence found them with ${lb["p@k_influence"].toFixed(2)}, at a fraction of the cost. Rank correlation between the two is ${lb.mean_spearman.toFixed(2)}, which mostly measures noise among clean batches. Dropping all suspects together (the recovery chart) is the reliable counterfactual check.</p>` : ""}`;
+
+    $("#tiles").innerHTML = `
+      <div class="tile"><div class="num">${comb["p@k"].toFixed(2)}</div><div class="lbl">precision@k localizing corrupted batches</div><div class="cmp">loss baseline ${loss["p@k"].toFixed(2)} · random ${loc.random["p@k"].toFixed(2)}</div></div>
+      <div class="tile"><div class="num">${pct(rec.drop.median_recovery)}</div><div class="lbl">median regression recovered by drop repair</div><div class="cmp">oracle ${pct(rec["oracle drop"].median_recovery)}</div></div>
+      <div class="tile"><div class="num">${pct(g.false_block_rate_clean_controls)}</div><div class="lbl">clean models falsely blocked by the gate</div><div class="cmp">blocks ${pct(g["block_rate_corrupt_gap>=0.004"])} of large regressions</div></div>
+      ${lb.speedup_full_diagnosis_vs_lobo ? `<div class="tile"><div class="num">${lb.speedup_full_diagnosis_vs_lobo.toFixed(0)}×</div><div class="lbl">faster than exact leave-one-batch-out retraining</div><div class="cmp">${o.mean_diagnose_s.toFixed(1)} s vs ${lb.mean_lobo_s.toFixed(0)} s</div></div>` : ""}`;
+  }
+
+  fetch("data/demo.json").then((r) => r.json()).then(renderDemo).catch((e) => console.error("demo.json", e));
+  fetch("data/benchmark.json").then((r) => r.json()).then(renderBench)
+    .catch(() => { $("#bench").style.display = "none"; $("#tiles").style.display = "none"; });
+})();
+</script>
+</body>
+</html>

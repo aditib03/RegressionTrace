@@ -9,7 +9,19 @@ safeguards.
 
 `Python` · `LightGBM` · `DuckDB` · `MLflow` · `FastAPI`
 
-<!-- RESULTS -->
+**Live demo page:** https://aditib03.github.io/batchsleuth/ (real outputs from the demo and benchmark)
+
+### Results (135 fault-injection scenarios, [details](benchmark/results/results.md))
+
+| | BatchSleuth | best baseline |
+|---|---|---|
+| Root-cause localization, precision@k | **0.95** | 0.85 (mean training loss per batch) |
+| Regression recovered by auto-repair (median) | **79%** | 84% for an oracle that knows the bad batches |
+| Large regressions blocked by the promotion gate | **100%** (n=14) | |
+| Clean models falsely blocked | **7%** (n=15) | |
+| Diagnosis time vs exact leave-one-batch-out retraining | **2.7 s vs 63 s (24×)** | |
+
+![localization](benchmark/results/figures/localization.png)
 
 ---
 
@@ -32,7 +44,7 @@ make setup        # venv + editable install; nothing installed system-wide
 make demo         # ~40 s: ingest -> regression -> diagnose -> repair -> promote
 make serve        # API + interactive docs at http://127.0.0.1:8000/docs
 make test         # 18 tests, ~35 s, synthetic data only
-make bench-quick  # ~2.5 min smoke benchmark;  `make bench` for the full ~30 min run
+make bench-quick  # ~2.5 min smoke benchmark;  `make bench` for the full ~40 min run
 ```
 
 The demo downloads the UCI Covertype dataset once (~11 MB) through scikit-learn.
@@ -135,7 +147,24 @@ calibration (ECE), worst per-slice AUC, and a cap on how much training data a re
 
 ## Limitations & honest findings
 
-<!-- FINDINGS -->
+* **A naive baseline is strong.** Ranking batches by mean training loss gets precision@k 0.85, against 0.95 for
+  the combined score. Most injected bugs raise in-sample loss; the gap comes from feature-level bugs
+  (zero-fills, unit changes), where the validation signal reaches 1.00 and loss alone 0.72–0.80.
+* **Drift detection is a trap here.** PSI alone scores 0.08 (random: 0.03). With heterogeneous sources, clean
+  batches drift too. It's used only in explanations.
+* **Exact leave-one-batch-out is a noisy reference for boosted trees.** Removing one corrupted batch changes
+  eval log-loss by about 5e-4, while removing *clean* batches varies it by 1e-3 (signal-to-noise 0.5): a single
+  retrain mostly reshuffles tree structure. Exact LOBO found the bad batches with precision@k 0.13 versus 0.87
+  for influence, and their rank correlation is ~0.06. Magnitudes don't line up reliably either: in 3 of 10
+  scenarios the exact single-batch effect even had the opposite sign. So influence is used here to *rank*
+  batches, not to predict exact loss changes, and group removal (the recovery metric) is the reliable
+  counterfactual check.
+* **Relabelling isn't a universal fix.** It recovers 51% (median) against 79% for dropping, because it can't
+  repair corrupted features. The gate correctly blocks it in the demo.
+* **The gate is conservative but not perfect.** It blocks only 38% of *all* corrupted models (many low-severity
+  faults are harmless), and it falsely blocked 1 of 15 clean retrains.
+* **Scope.** Binary classification with LightGBM on one tabular dataset, with synthetic faults. Signal weights
+  and the suspect threshold were tuned on separate seeds; real pipelines will need re-tuning.
 
 ## API
 
@@ -161,7 +190,7 @@ On macOS, LightGBM needs an OpenMP runtime. If Homebrew's `libomp` is missing, `
 LightGBM at the copy bundled inside scikit-learn's wheel (only files inside `.venv` are touched);
 `brew install libomp` also works.
 
-## Deploying the public demo
+## Deploying a live API
 
 The `Dockerfile` builds the demo at image-build time and serves the API read-only on port 7860. It
 works as-is on a **Hugging Face Space** (SDK: Docker) or Render/Fly.io:

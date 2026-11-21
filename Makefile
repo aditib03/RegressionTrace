@@ -19,12 +19,12 @@ test:
 	$(NICE) $(PY) -m pytest -q
 
 lint:
-	$(PY) -m ruff check batchsleuth benchmark tests
+	$(PY) -m ruff check batchsleuth benchmark tests scripts
 
 bench-quick:      ## ~2.5 min smoke benchmark
 	$(NICE) $(PY) -m benchmark.run --quick
 
-bench:            ## full benchmark (~30 min on a 4-thread budget); results -> benchmark/results/
+bench:            ## full benchmark (~40 min on a 4-thread budget); results -> benchmark/results/
 	$(NICE) $(PY) -m benchmark.run
 
 clean:            ## delete generated state (store, MLflow runs); keeps the downloaded dataset

@@ -1,0 +1,413 @@
+{
+ "versions": [
+  {
+   "version_id": "v-6f4b37e532b1",
+   "parent_version": null,
+   "n_batches": 80,
+   "repair": "null",
+   "created_at": "2026-11-21T15:26:19.724",
+   "note": "initial training set (historical batches)"
+  },
+  {
+   "version_id": "v-b4b173247a78",
+   "parent_version": "v-6f4b37e532b1",
+   "n_batches": 100,
+   "repair": "null",
+   "created_at": "2026-11-21T15:26:19.725",
+   "note": "refresh: v1 + 20 new daily batches"
+  },
+  {
+   "version_id": "v-48e9481bf9f0",
+   "parent_version": "v-b4b173247a78",
+   "n_batches": 100,
+   "repair": "{\"action\": \"relabel\", \"suspects\": [38, 69, 78, 63, 41], \"source_run\": \"6d34c0ec456a4e9ca628208a52aaf997\"}",
+   "created_at": "2026-11-21T15:26:39.367",
+   "note": "counterfactual: relabel [38, 69, 78, 63, 41]"
+  },
+  {
+   "version_id": "v-a6218025f14d",
+   "parent_version": "v-b4b173247a78",
+   "n_batches": 95,
+   "repair": "{\"action\": \"drop\", \"suspects\": [38, 69, 78, 63, 41], \"source_run\": \"6d34c0ec456a4e9ca628208a52aaf997\"}",
+   "created_at": "2026-11-21T15:26:49.457",
+   "note": "counterfactual: drop [38, 69, 78, 63, 41]"
+  }
+ ],
+ "n_batches": 100,
+ "rows_per_batch": 2000,
+ "injected_faults": [
+  {
+   "batch_id": 63,
+   "fault": "class_flip",
+   "severity": "high",
+   "description": "relabelled 368 positives as negative"
+  },
+  {
+   "batch_id": 69,
+   "fault": "unit_change",
+   "severity": "high",
+   "description": "rescaled ['horizontal_distance_to_fire_points', 'elevation'] and flipped 402 labels on 777 rows"
+  },
+  {
+   "batch_id": 78,
+   "fault": "label_flip",
+   "severity": "high",
+   "description": "flipped 777 labels"
+  },
+  {
+   "batch_id": 38,
+   "fault": "missing_burst",
+   "severity": "high",
+   "description": "zero-filled ['horizontal_distance_to_fire_points', 'elevation', 'hillshade_noon'] on 819 rows"
+  },
+  {
+   "batch_id": 41,
+   "fault": "feature_shuffle",
+   "severity": "high",
+   "description": "misaligned ['horizontal_distance_to_fire_points', 'elevation', 'hillshade_noon'] on 769 rows"
+  }
+ ],
+ "refresh_gate": {
+  "passed": false,
+  "checks": [
+   {
+    "name": "auc_non_inferior",
+    "passed": true,
+    "detail": "dAUC=-0.0005 (95% CI -0.0013..+0.0002), need CI low > -0.0020"
+   },
+   {
+    "name": "logloss",
+    "passed": false,
+    "detail": "dLogLoss=+0.0037, limit +0.002"
+   },
+   {
+    "name": "calibration",
+    "passed": true,
+    "detail": "dECE=+0.0022, limit +0.01"
+   },
+   {
+    "name": "slice_auc",
+    "passed": true,
+    "detail": "worst slice 0 dAUC=-0.0032, limit -0.01"
+   },
+   {
+    "name": "data_removed",
+    "passed": true,
+    "detail": "removed 0.0% of training rows, limit 15%"
+   }
+  ],
+  "candidate": {
+   "auc": 0.9286605777528079,
+   "logloss": 0.35796256046893127,
+   "ece": 0.055122330716732844,
+   "auc_slice_0": 0.9288154520780463,
+   "auc_slice_1": 0.9519780772818776,
+   "auc_slice_2": 0.9134047091577099,
+   "auc_slice_3": 0.9693643574033003
+  },
+  "champion": {
+   "auc": 0.9291175890258613,
+   "logloss": 0.3543102862836981,
+   "ece": 0.05289618202443881,
+   "auc_slice_0": 0.932012731689621,
+   "auc_slice_1": 0.9477340796386311,
+   "auc_slice_2": 0.9107482881356026,
+   "auc_slice_3": 0.9591281998270872
+  }
+ },
+ "diagnosis": {
+  "timings_s": {
+   "influence_s": 1.5634743749978952,
+   "label_quality_s": 1.7979262089938857,
+   "drift_s": 0.07602091701119207,
+   "total_s": 3.437421501002973
+  },
+  "suspects": [
+   38,
+   69,
+   78,
+   63,
+   41
+  ],
+  "batches": [
+   {
+    "batch": 38,
+    "score": 85.1229986616,
+    "influence_total": 1.0148320162,
+    "label_issue_frac": 0.0425,
+    "oor_rate": 0.417,
+    "drift_max_psi": 0.8232105387,
+    "z_influence": 4.4229986616,
+    "z_label_quality": -0.9229873551,
+    "z_validation": 80.7,
+    "explanation": "raises eval loss (influence z=4.4); 42% rows out of range (e.g. elevation); distribution shift in elevation, hillshade_noon, horizontal_distance_to_fire_points"
+   },
+   {
+    "batch": 69,
+    "score": 81.6575678994,
+    "influence_total": 1.1959665291,
+    "label_issue_frac": 0.047,
+    "oor_rate": 0.3965,
+    "drift_max_psi": 0.7425071568,
+    "z_influence": 5.0575678994,
+    "z_label_quality": -0.2839961093,
+    "z_validation": 76.6,
+    "explanation": "raises eval loss (influence z=5.1); 40% rows out of range (e.g. elevation); distribution shift in elevation, horizontal_distance_to_fire_points"
+   },
+   {
+    "batch": 78,
+    "score": 74.0502676431,
+    "influence_total": 12.1981829716,
+    "label_issue_frac": 0.2585,
+    "oor_rate": 0.017,
+    "drift_max_psi": 0.0517226908,
+    "z_influence": 43.6016751989,
+    "z_label_quality": 29.7485924443,
+    "z_validation": 0.7,
+    "explanation": "raises eval loss (influence z=43.6); 26% likely label errors"
+   },
+   {
+    "batch": 63,
+    "score": 39.8623751286,
+    "influence_total": 7.3281734785,
+    "label_issue_frac": 0.14,
+    "oor_rate": 0.0155,
+    "drift_max_psi": 0.0231738773,
+    "z_influence": 26.5405521576,
+    "z_label_quality": 12.921822971,
+    "z_validation": 0.4,
+    "explanation": "raises eval loss (influence z=26.5); 14% likely label errors"
+   },
+   {
+    "batch": 41,
+    "score": 21.464994422,
+    "influence_total": 3.4271587227,
+    "label_issue_frac": 0.1095,
+    "oor_rate": 0.012,
+    "drift_max_psi": 0.0203630621,
+    "z_influence": 12.8741121171,
+    "z_label_quality": 8.5908823049,
+    "z_validation": -0.3,
+    "explanation": "raises eval loss (influence z=12.9); 11% likely label errors"
+   },
+   {
+    "batch": 13,
+    "score": 4.6985212791,
+    "influence_total": 0.4652230448,
+    "label_issue_frac": 0.0645,
+    "oor_rate": 0.0095,
+    "drift_max_psi": 0.2287059711,
+    "z_influence": 2.4975514324,
+    "z_label_quality": 2.2009698467,
+    "z_validation": -0.8,
+    "explanation": "no strong signal"
+   },
+   {
+    "batch": 81,
+    "score": 3.6004311179,
+    "influence_total": 0.4355071586,
+    "label_issue_frac": 0.0575,
+    "oor_rate": 0.0095,
+    "drift_max_psi": 0.091257622,
+    "z_influence": 2.3934476536,
+    "z_label_quality": 1.2069834643,
+    "z_validation": -0.8,
+    "explanation": "no strong signal"
+   },
+   {
+    "batch": 34,
+    "score": 3.2581086576,
+    "influence_total": 0.0900290819,
+    "label_issue_frac": 0.0615,
+    "oor_rate": 0.015,
+    "drift_max_psi": 0.0468579756,
+    "z_influence": 1.1831329748,
+    "z_label_quality": 1.7749756828,
+    "z_validation": 0.3,
+    "explanation": "no strong signal"
+   },
+   {
+    "batch": 0,
+    "score": 2.9109601198,
+    "influence_total": -0.2617511817,
+    "label_issue_frac": 0.0695,
+    "oor_rate": 0.008,
+    "drift_max_psi": 0.7758751351,
+    "z_influence": -0.0492601793,
+    "z_label_quality": 2.9109601198,
+    "z_validation": -1.1,
+    "explanation": "no strong signal"
+   },
+   {
+    "batch": 16,
+    "score": 2.8641606265,
+    "influence_total": 0.0632121014,
+    "label_issue_frac": 0.0615,
+    "oor_rate": 0.0115,
+    "drift_max_psi": 0.1895171827,
+    "z_influence": 1.0891849437,
+    "z_label_quality": 1.7749756828,
+    "z_validation": -0.4,
+    "explanation": "no strong signal"
+   },
+   {
+    "batch": 71,
+    "score": 2.7242145423,
+    "influence_total": 0.2159335382,
+    "label_issue_frac": 0.0445,
+    "oor_rate": 0.019,
+    "drift_max_psi": 0.0402363106,
+    "z_influence": 1.6242145423,
+    "z_label_quality": -0.6389912458,
+    "z_validation": 1.1,
+    "explanation": "no strong signal"
+   },
+   {
+    "batch": 25,
+    "score": 2.6802256096,
+    "influence_total": -0.0186939614,
+    "label_issue_frac": 0.058,
+    "oor_rate": 0.0165,
+    "drift_max_psi": 0.0991243715,
+    "z_influence": 0.802243118,
+    "z_label_quality": 1.2779824916,
+    "z_validation": 0.6,
+    "explanation": "no strong signal"
+   }
+  ]
+ },
+ "repairs": {
+  "relabel": {
+   "suspects": [
+    38,
+    69,
+    78,
+    63,
+    41
+   ],
+   "removed_frac": 0.0,
+   "changed_rows": 1195,
+   "new_version": "v-48e9481bf9f0",
+   "gate": {
+    "passed": false,
+    "checks": [
+     {
+      "name": "auc_non_inferior",
+      "passed": false,
+      "detail": "dAUC=-0.0014 (95% CI -0.0021..-0.0007), need CI low > -0.0020"
+     },
+     {
+      "name": "logloss",
+      "passed": true,
+      "detail": "dLogLoss=+0.0015, limit +0.002"
+     },
+     {
+      "name": "calibration",
+      "passed": true,
+      "detail": "dECE=-0.0050, limit +0.01"
+     },
+     {
+      "name": "slice_auc",
+      "passed": true,
+      "detail": "worst slice 0 dAUC=-0.0028, limit -0.01"
+     },
+     {
+      "name": "data_removed",
+      "passed": true,
+      "detail": "removed 0.0% of training rows, limit 15%"
+     }
+    ],
+    "candidate": {
+     "auc": 0.9277280187625843,
+     "logloss": 0.3557842411936698,
+     "ece": 0.04790548691556212,
+     "auc_slice_0": 0.9291665421232103,
+     "auc_slice_1": 0.9453282270339275,
+     "auc_slice_2": 0.9098363676768253,
+     "auc_slice_3": 0.9728789986091795
+    },
+    "champion": {
+     "auc": 0.9291175890258613,
+     "logloss": 0.3543102862836981,
+     "ece": 0.05289618202443881,
+     "auc_slice_0": 0.932012731689621,
+     "auc_slice_1": 0.9477340796386311,
+     "auc_slice_2": 0.9107482881356026,
+     "auc_slice_3": 0.9591281998270872
+    }
+   }
+  },
+  "drop": {
+   "suspects": [
+    38,
+    69,
+    78,
+    63,
+    41
+   ],
+   "removed_frac": 0.050000000000000044,
+   "changed_rows": 10000,
+   "new_version": "v-a6218025f14d",
+   "gate": {
+    "passed": true,
+    "checks": [
+     {
+      "name": "auc_non_inferior",
+      "passed": true,
+      "detail": "dAUC=-0.0004 (95% CI -0.0010..+0.0002), need CI low > -0.0020"
+     },
+     {
+      "name": "logloss",
+      "passed": true,
+      "detail": "dLogLoss=+0.0008, limit +0.002"
+     },
+     {
+      "name": "calibration",
+      "passed": true,
+      "detail": "dECE=-0.0022, limit +0.01"
+     },
+     {
+      "name": "slice_auc",
+      "passed": true,
+      "detail": "worst slice 1 dAUC=-0.0054, limit -0.01"
+     },
+     {
+      "name": "data_removed",
+      "passed": true,
+      "detail": "removed 5.0% of training rows, limit 15%"
+     }
+    ],
+    "candidate": {
+     "auc": 0.928689803001834,
+     "logloss": 0.35508670799475806,
+     "ece": 0.05067331024727677,
+     "auc_slice_0": 0.9312706650261231,
+     "auc_slice_1": 0.9423393234153288,
+     "auc_slice_2": 0.911380904879537,
+     "auc_slice_3": 0.9586606773672142
+    },
+    "champion": {
+     "auc": 0.9291175890258613,
+     "logloss": 0.3543102862836981,
+     "ece": 0.05289618202443881,
+     "auc_slice_0": 0.932012731689621,
+     "auc_slice_1": 0.9477340796386311,
+     "auc_slice_2": 0.9107482881356026,
+     "auc_slice_3": 0.9591281998270872
+    }
+   }
+  }
+ },
+ "promoted": true,
+ "provenance_example": {
+  "batch_id": 63,
+  "source": "daily-drop-10",
+  "row_count": 2000,
+  "content_sha256": "6ab23744104d3d9976a57112eccd5dfef86e77d447abb58da326969b0f017658",
+  "versions": [
+   "v-b4b173247a78",
+   "v-48e9481bf9f0"
+  ],
+  "hash_verified": true
+ }
+}
