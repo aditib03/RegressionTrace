@@ -1,15 +1,15 @@
 import os
 import tempfile
 
-# Isolate all state (DuckDB store, MLflow) in a temp dir before batchsleuth is imported.
-os.environ["BATCHSLEUTH_HOME"] = tempfile.mkdtemp(prefix="batchsleuth-test-")
-os.environ.setdefault("BATCHSLEUTH_N_JOBS", "2")
+# Isolate all state (DuckDB store, MLflow) in a temp dir before regressiontrace is imported.
+os.environ["REGRESSIONTRACE_HOME"] = tempfile.mkdtemp(prefix="regressiontrace-test-")
+os.environ.setdefault("REGRESSIONTRACE_N_JOBS", "2")
 os.environ["MLFLOW_DISABLE_AGENT_HINT"] = "1"
 
 import numpy as np
 import pytest
 
-from batchsleuth.data import load_batched
+from regressiontrace.data import load_batched
 
 
 @pytest.fixture(scope="session")

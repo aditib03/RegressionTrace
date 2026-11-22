@@ -13,7 +13,7 @@ from mlflow import MlflowClient
 
 from .config import CHAMPION_ALIAS, PATHS, REGISTERED_MODEL
 
-EXPERIMENT = "batchsleuth"
+EXPERIMENT = "regressiontrace"
 
 
 def setup():

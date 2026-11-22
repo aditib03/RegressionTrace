@@ -1,14 +1,14 @@
 import numpy as np
 import pytest
 
-from batchsleuth import diagnose as D
-from batchsleuth import faults as F
-from batchsleuth import gate as G
-from batchsleuth import influence as I
-from batchsleuth import labelq as LQ
-from batchsleuth import model as M
-from batchsleuth import repair as R
-from batchsleuth.provenance import Store
+from regressiontrace import diagnose as D
+from regressiontrace import faults as F
+from regressiontrace import gate as G
+from regressiontrace import influence as I
+from regressiontrace import labelq as LQ
+from regressiontrace import model as M
+from regressiontrace import repair as R
+from regressiontrace.provenance import Store
 
 
 def test_influence_recomputes_lightgbm_leaf_values(small, eval_set):

@@ -16,5 +16,5 @@ jobs:
           python-version: ${{ matrix.python }}
           cache: pip
       - run: pip install -e ".[dev]"
-      - run: ruff check batchsleuth benchmark tests scripts
+      - run: ruff check regressiontrace benchmark tests scripts
       - run: pytest -q   # synthetic data only: no dataset download in CI

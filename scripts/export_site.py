@@ -1,6 +1,6 @@
 """Export real demo + benchmark outputs to docs/data/*.json for the GitHub Pages site.
 
-Runs the full demo story in an isolated temporary BATCHSLEUTH_HOME (your local
+Runs the full demo story in an isolated temporary REGRESSIONTRACE_HOME (your local
 store and MLflow runs are untouched), then copies the benchmark summary.
 
     python scripts/export_site.py
@@ -16,16 +16,16 @@ import tempfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-home = Path(tempfile.mkdtemp(prefix="batchsleuth-site-"))
+home = Path(tempfile.mkdtemp(prefix="regressiontrace-site-"))
 (home / "data").mkdir()
 if (REPO / "data" / "sk").exists():  # reuse the downloaded dataset
     os.symlink(REPO / "data" / "sk", home / "data" / "sk")
-os.environ["BATCHSLEUTH_HOME"] = str(home)
+os.environ["REGRESSIONTRACE_HOME"] = str(home)
 os.environ["MLFLOW_DISABLE_AGENT_HINT"] = "1"
 sys.path.insert(0, str(REPO))
 
-from batchsleuth import pipeline as P
-from batchsleuth.repair import select_suspects
+from regressiontrace import pipeline as P
+from regressiontrace.repair import select_suspects
 
 
 def gate(res: dict) -> dict:

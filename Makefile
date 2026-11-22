@@ -13,13 +13,13 @@ demo:             ## build the demo store, then diagnose -> repair the regressed
 	./scripts/demo.sh
 
 serve:            ## API on http://127.0.0.1:8000/docs
-	$(PY) -m batchsleuth.cli serve
+	$(PY) -m regressiontrace.cli serve
 
 test:
 	$(NICE) $(PY) -m pytest -q
 
 lint:
-	$(PY) -m ruff check batchsleuth benchmark tests scripts
+	$(PY) -m ruff check regressiontrace benchmark tests scripts
 
 bench-quick:      ## ~2.5 min smoke benchmark
 	$(NICE) $(PY) -m benchmark.run --quick
@@ -28,4 +28,4 @@ bench:            ## full benchmark (~40 min on a 4-thread budget); results -> b
 	$(NICE) $(PY) -m benchmark.run
 
 clean:            ## delete generated state (store, MLflow runs); keeps the downloaded dataset
-	rm -rf data/batchsleuth.duckdb mlflow.db mlartifacts .pytest_cache
+	rm -rf data/regressiontrace.duckdb mlflow.db mlartifacts .pytest_cache

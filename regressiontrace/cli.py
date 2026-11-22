@@ -1,4 +1,4 @@
-"""Command line interface: ``batchsleuth <command>``."""
+"""Command line interface: ``regressiontrace <command>``."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ def cmd_init(a):
     print(f"candidate run: {out['candidate_run']}")
     print("\nRegression check for the refresh candidate:")
     print(P.check(out["candidate_run"])["summary"])
-    print("\nNext: batchsleuth diagnose", out["candidate_run"])
+    print("\nNext: regressiontrace diagnose", out["candidate_run"])
 
 
 def cmd_status(a):
@@ -67,7 +67,7 @@ def cmd_repair(a):
     print(f"{a.action} suspects {out['suspects']} -> version {out['new_version']}, run {out['new_run']}")
     print(out["gate"]["summary"])
     if out["gate"]["passed"]:
-        print(f"\nNext: batchsleuth promote {out['new_run']}")
+        print(f"\nNext: regressiontrace promote {out['new_run']}")
 
 
 def cmd_promote(a):
@@ -85,7 +85,7 @@ def cmd_faults(a):
 
 def cmd_serve(a):
     import uvicorn
-    uvicorn.run("batchsleuth.api:app", host=a.host, port=a.port)
+    uvicorn.run("regressiontrace.api:app", host=a.host, port=a.port)
 
 
 def cmd_bench(a):
@@ -94,7 +94,7 @@ def cmd_bench(a):
 
 
 def main(argv=None):
-    p = argparse.ArgumentParser(prog="batchsleuth", description=__doc__)
+    p = argparse.ArgumentParser(prog="regressiontrace", description=__doc__)
     sub = p.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("init", help="build the demo store, champion and refresh candidate")
     s.add_argument("--seed", type=int, default=0)

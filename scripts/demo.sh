@@ -2,7 +2,7 @@
 # End-to-end demo: init -> regression check -> diagnose -> repair -> promote.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-BS="${PY:-.venv/bin/python} -m batchsleuth.cli"
+BS="${PY:-.venv/bin/python} -m regressiontrace.cli"
 export MLFLOW_DISABLE_AGENT_HINT=1
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
 quiet() { grep -v -E "INFO mlflow|Registered model|Created version|Successfully registered" || true; }

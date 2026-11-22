@@ -3,7 +3,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from batchsleuth import pipeline as P
+from regressiontrace import pipeline as P
 
 
 @pytest.fixture(scope="module")
@@ -13,7 +13,7 @@ def demo():
 
 @pytest.fixture(scope="module")
 def client(demo):
-    from batchsleuth.api import app
+    from regressiontrace.api import app
     return TestClient(app)
 
 
@@ -48,6 +48,6 @@ def test_repair_then_promote(client, demo):
 
 
 def test_read_only_mode_blocks_writes(client, demo, monkeypatch):
-    from batchsleuth import api
+    from regressiontrace import api
     monkeypatch.setattr(api, "READ_ONLY", True)
     assert client.post("/promote", json={"run_id": demo["candidate_run"]}).status_code == 403

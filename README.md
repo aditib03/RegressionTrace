@@ -1,19 +1,19 @@
-# BatchSleuth
+# RegressionTrace
 
 **Counterfactual training-data debugging for ML systems.** When a retrained model gets worse,
-BatchSleuth traces the regression to the training-data *batches* that caused it, tests repairs
+RegressionTrace traces the regression to the training-data *batches* that caused it, tests repairs
 counterfactually (drop / relabel / reweight → retrain), and only promotes a model that passes
 safeguards.
 
-[![ci](https://github.com/aditib03/batchsleuth/actions/workflows/ci.yml/badge.svg)](https://github.com/aditib03/batchsleuth/actions/workflows/ci.yml)
+[![ci](https://github.com/aditib03/RegressionTrace/actions/workflows/ci.yml/badge.svg)](https://github.com/aditib03/RegressionTrace/actions/workflows/ci.yml)
 
 `Python` · `LightGBM` · `DuckDB` · `MLflow` · `FastAPI`
 
-**Live demo page:** https://aditib03.github.io/batchsleuth/ (real outputs from the demo and benchmark)
+**Live demo page:** https://aditib03.github.io/RegressionTrace/ (real outputs from the demo and benchmark)
 
 ### Results (135 fault-injection scenarios, [details](benchmark/results/results.md))
 
-| | BatchSleuth | best baseline |
+| | RegressionTrace | best baseline |
 |---|---|---|
 | Root-cause localization, precision@k | **0.95** | 0.85 (mean training loss per batch) |
 | Regression recovered by auto-repair (median) | **79%** | 84% for an oracle that knows the bad batches |
@@ -29,7 +29,7 @@ safeguards.
 
 Production models are retrained on a stream of data drops: daily files, new sources, re-labelled
 exports. When a refresh regresses, the usual question is *"which data did this?"*, and the usual
-answer is days of manual bisecting. BatchSleuth automates the loop:
+answer is days of manual bisecting. RegressionTrace automates the loop:
 
 ```
 new batches ──► retrain ──► regression check ──► diagnose ──► counterfactual repair ──► gated promotion
@@ -39,7 +39,7 @@ new batches ──► retrain ──► regression check ──► diagnose ─�
 ## Quickstart
 
 ```bash
-git clone https://github.com/aditib03/batchsleuth.git && cd batchsleuth
+git clone https://github.com/aditib03/RegressionTrace.git && cd RegressionTrace
 make setup        # venv + editable install; nothing installed system-wide
 make demo         # ~40 s: ingest -> regression -> diagnose -> repair -> promote
 make serve        # API + interactive docs at http://127.0.0.1:8000/docs
@@ -56,7 +56,7 @@ bugs (a zero-filled outage, a broken join, a positive→negative labelling bug, 
 new source, random label noise). The refreshed model is **blocked** by the promotion gate, then:
 
 ```
-$ batchsleuth diagnose <candidate-run>
+$ regressiontrace diagnose <candidate-run>
 batch  score  z_influence  z_label_quality  z_validation  explanation
 38     85.1   4.4          -0.9             80.7          raises eval loss; 42% rows out of range (e.g. elevation); ...
 69     81.7   5.1          -0.3             76.6          raises eval loss; 40% rows out of range (e.g. elevation); ...
@@ -66,8 +66,8 @@ batch  score  z_influence  z_label_quality  z_validation  explanation
 13     4.7    2.5          2.2              -0.8          no strong signal
 Suspects above threshold: [38, 69, 78, 63, 41]      <- exactly the 5 injected faults
 
-$ batchsleuth repair <candidate-run> --action relabel   -> PROMOTION BLOCKED (relabelling can't fix corrupted features)
-$ batchsleuth repair <candidate-run> --action drop      -> PROMOTION ALLOWED -> promoted to champion
+$ regressiontrace repair <candidate-run> --action relabel   -> PROMOTION BLOCKED (relabelling can't fix corrupted features)
+$ regressiontrace repair <candidate-run> --action drop      -> PROMOTION ALLOWED -> promoted to champion
 ```
 
 ## How it works
@@ -135,7 +135,7 @@ calibration (ECE), worst per-slice AUC, and a cap on how much training data a re
   (5k for diagnosis, 25k for the gate). Batches are deliberately **non-i.i.d.**: rows are ordered by a noisy
   geographic key, so clean batches differ from each other like real sources do. With i.i.d. batches, every
   method (even a naive loss ranking) scored 100%, which tells you nothing.
-* **Faults** (`batchsleuth/faults.py`): random label flips, positive→negative class flips, broken-join
+* **Faults** (`regressiontrace/faults.py`): random label flips, positive→negative class flips, broken-join
   column shuffles, unit change + label-policy shift, zero-fill outages. **Severity = fraction of the bad
   batch's rows affected** (5% / 15% / 40%), so most rows in a bad batch look normal.
 * **Grid:** 5 faults × 3 severities × k ∈ {1, 3, 5} corrupted batches × 3 seeds = 135 scenarios.
@@ -178,13 +178,13 @@ calibration (ECE), worst per-slice AUC, and a cap on how much training data a re
 | POST | `/repair` | counterfactual dataset version → retrain → gate |
 | POST | `/promote` | promote only if the gate passes |
 
-`BATCHSLEUTH_READ_ONLY=1` disables `/repair` and `/promote` and caches results (used for the public demo).
+`REGRESSIONTRACE_READ_ONLY=1` disables `/repair` and `/promote` and caches results (used for the public demo).
 
 ## Resource footprint
 
 Measured on an Apple M4 laptop: peak RAM ≈ 1.2 GB; full training run 0.4 s; full diagnosis ≈ 2.3 s;
 disk ≈ 25 MB of data + MLflow state (plus ~800 MB virtualenv). LightGBM is capped at 4 threads by
-default (`BATCHSLEUTH_N_JOBS`), and benchmarks run under `nice`. No GPU or cloud compute needed.
+default (`REGRESSIONTRACE_N_JOBS`), and benchmarks run under `nice`. No GPU or cloud compute needed.
 
 On macOS, LightGBM needs an OpenMP runtime. If Homebrew's `libomp` is missing, `make setup` points
 LightGBM at the copy bundled inside scikit-learn's wheel (only files inside `.venv` are touched);
@@ -196,13 +196,13 @@ The `Dockerfile` builds the demo at image-build time and serves the API read-onl
 works as-is on a **Hugging Face Space** (SDK: Docker) or Render/Fly.io:
 
 ```bash
-docker build -t batchsleuth . && docker run -p 7860:7860 batchsleuth   # http://localhost:7860/docs
+docker build -t regressiontrace . && docker run -p 7860:7860 regressiontrace   # http://localhost:7860/docs
 ```
 
 ## Layout
 
 ```
-batchsleuth/   data, faults, provenance (DuckDB), model, influence, labelq, drift,
+regressiontrace/   data, faults, provenance (DuckDB), model, influence, labelq, drift,
                diagnose, repair, gate, tracking (MLflow), pipeline, api (FastAPI), cli
 benchmark/     run.py + results/ (CSV, summary.json, results.md, figures)
 tests/         unit + end-to-end API tests (synthetic data)

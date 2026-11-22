@@ -6,7 +6,7 @@
   "n_jobs": 4,
   "machine": "arm64 / Darwin",
   "localization": {
-    "combined (BatchSleuth)": {
+    "combined (RegressionTrace)": {
       "p@k": 0.9471604938271605,
       "ap": 0.9597199445859004
     },
@@ -37,7 +37,7 @@
   },
   "localization_by_fault": {
     "class_flip": {
-      "combined (BatchSleuth)": 0.914,
+      "combined (RegressionTrace)": 0.914,
       "influence only": 0.941,
       "label quality only": 0.785,
       "validation (out-of-range) only": 0.04,
@@ -46,7 +46,7 @@
       "random": 0.027
     },
     "feature_shuffle": {
-      "combined (BatchSleuth)": 0.822,
+      "combined (RegressionTrace)": 0.822,
       "influence only": 0.84,
       "label quality only": 0.657,
       "validation (out-of-range) only": 0.074,
@@ -55,7 +55,7 @@
       "random": 0.015
     },
     "label_flip": {
-      "combined (BatchSleuth)": 1.0,
+      "combined (RegressionTrace)": 1.0,
       "influence only": 1.0,
       "label quality only": 0.936,
       "validation (out-of-range) only": 0.022,
@@ -64,7 +64,7 @@
       "random": 0.064
     },
     "missing_burst": {
-      "combined (BatchSleuth)": 1.0,
+      "combined (RegressionTrace)": 1.0,
       "influence only": 0.699,
       "label quality only": 0.035,
       "validation (out-of-range) only": 1.0,
@@ -73,7 +73,7 @@
       "random": 0.03
     },
     "unit_change": {
-      "combined (BatchSleuth)": 1.0,
+      "combined (RegressionTrace)": 1.0,
       "influence only": 0.928,
       "label quality only": 0.119,
       "validation (out-of-range) only": 1.0,

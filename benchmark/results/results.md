@@ -6,7 +6,7 @@
 
 | method | precision@k | average precision |
 |---|---|---|
-| combined (BatchSleuth) | 0.947 | 0.960 |
+| combined (RegressionTrace) | 0.947 | 0.960 |
 | influence only | 0.881 | 0.905 |
 | loss-only baseline | 0.851 | 0.876 |
 | label quality only | 0.506 | 0.559 |
@@ -16,7 +16,7 @@
 
 ### precision@k by fault type
 
-| fault | combined (BatchSleuth) | influence only | label quality only | validation (out-of-range) only | PSI drift only | loss-only baseline | random |
+| fault | combined (RegressionTrace) | influence only | label quality only | validation (out-of-range) only | PSI drift only | loss-only baseline | random |
 |---|---|---|---|---|---|---|---|
 | class_flip | 0.91 | 0.94 | 0.79 | 0.04 | 0.03 | 0.91 | 0.03 |
 | feature_shuffle | 0.82 | 0.84 | 0.66 | 0.07 | 0.00 | 0.84 | 0.01 |

@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "batchsleuth"
+name = "regressiontrace"
 version = "0.1.0"
 description = "Counterfactual training-data debugging: trace model regressions to suspicious training batches."
 readme = "README.md"
@@ -27,10 +27,10 @@ dependencies = [
 dev = ["pytest>=8", "httpx>=0.27", "ruff>=0.5"]
 
 [project.scripts]
-batchsleuth = "batchsleuth.cli:main"
+regressiontrace = "regressiontrace.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["batchsleuth*"]
+include = ["regressiontrace*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

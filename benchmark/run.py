@@ -27,17 +27,17 @@ import pandas as pd
 from scipy.stats import pearsonr, spearmanr
 from sklearn.metrics import log_loss
 
-from batchsleuth import faults as F
-from batchsleuth import gate as G
-from batchsleuth import model as M
-from batchsleuth import repair as R
-from batchsleuth.config import N_JOBS
-from batchsleuth.data import SLICE_COLUMN, load_batched
-from batchsleuth.diagnose import diagnose
+from regressiontrace import faults as F
+from regressiontrace import gate as G
+from regressiontrace import model as M
+from regressiontrace import repair as R
+from regressiontrace.config import N_JOBS
+from regressiontrace.data import SLICE_COLUMN, load_batched
+from regressiontrace.diagnose import diagnose
 
 OUT = Path(__file__).parent / "results"
 METHODS = {
-    "combined (BatchSleuth)": "score",
+    "combined (RegressionTrace)": "score",
     "influence only": "influence_total",
     "label quality only": "label_issue_frac",
     "validation (out-of-range) only": "oor_rate",
@@ -171,11 +171,11 @@ def run(quick: bool):
                             "influence_s": diag.timings["influence_s"], "diagnose_s": diag.timings["total_s"],
                             "p@k|exact LOBO": precision_at_k(lobo_rank, bad, K),
                             "p@k|influence": row["p@k|influence only"],
-                            "p@k|combined": row["p@k|combined (BatchSleuth)"],
+                            "p@k|combined": row["p@k|combined (RegressionTrace)"],
                             "pred": pred.tolist(), "actual": deltas.tolist(), "bad": bad,
                         })
                     print(f"[{time.time() - t_start:6.0f}s] seed={seed} {fault:15s} {sev:4s} k={K} "
-                          f"gap={row['gap']:+.4f} P@k={row['p@k|combined (BatchSleuth)']:.2f}", flush=True)
+                          f"gap={row['gap']:+.4f} P@k={row['p@k|combined (RegressionTrace)']:.2f}", flush=True)
 
     return pd.DataFrame(scen), pd.DataFrame(lobo_rows), pd.DataFrame(controls), time.time() - t_start
 

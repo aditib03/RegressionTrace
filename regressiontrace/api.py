@@ -1,7 +1,7 @@
 """FastAPI service exposing provenance, diagnosis, counterfactual repair and gated promotion.
 
-Run with ``batchsleuth serve`` and open http://127.0.0.1:8000/docs for interactive docs.
-Set ``BATCHSLEUTH_READ_ONLY=1`` for public demos: mutating endpoints then return 403
+Run with ``regressiontrace serve`` and open http://127.0.0.1:8000/docs for interactive docs.
+Set ``REGRESSIONTRACE_READ_ONLY=1`` for public demos: mutating endpoints then return 403
 (diagnosis and checks still work).
 """
 
@@ -18,12 +18,12 @@ from pydantic import BaseModel, Field
 from . import __version__
 from . import pipeline as P
 
-READ_ONLY = os.environ.get("BATCHSLEUTH_READ_ONLY") == "1"
+READ_ONLY = os.environ.get("REGRESSIONTRACE_READ_ONLY") == "1"
 _cache: dict = {}  # read-only deployments: results are immutable, so cache them
 _lock = threading.Lock()  # one heavy job at a time: keeps CPU/RAM bounded and DuckDB single-writer
 
 app = FastAPI(
-    title="BatchSleuth",
+    title="RegressionTrace",
     version=__version__,
     description="Trace model regressions to suspicious training-data batches, test repairs "
                 "counterfactually, and promote only models that pass safeguards.",

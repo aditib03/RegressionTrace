@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BatchSleuth</title>
+<title>RegressionTrace</title>
 <meta name="description" content="Trace ML model regressions to the training-data batches that caused them, test repairs counterfactually, and promote only safe models.">
 <style>
 :root {
@@ -145,11 +145,11 @@ footer { padding: 28px 0 48px; color: var(--muted); font-size: 13px; border-top:
   <button class="toggle themebtn" id="themeBtn" aria-label="Toggle color theme">◐ Theme</button>
   <header class="hero">
     <div class="eyebrow">ML reliability · open source</div>
-    <h1>BatchSleuth</h1>
-    <p class="lede">When a retrained model gets worse, BatchSleuth traces the regression to the training-data
+    <h1>RegressionTrace</h1>
+    <p class="lede">When a retrained model gets worse, RegressionTrace traces the regression to the training-data
       <em>batches</em> that caused it, tests repairs counterfactually, and promotes a model only if it passes safeguards.</p>
     <div class="btns">
-      <a class="btn primary" href="https://github.com/aditib03/batchsleuth">View source on GitHub</a>
+      <a class="btn primary" href="https://github.com/aditib03/RegressionTrace">View source on GitHub</a>
       <a class="btn" href="#demo">See a regression traced</a>
       <a class="btn" href="#run">Run it yourself</a>
     </div>
@@ -247,7 +247,7 @@ footer { padding: 28px 0 48px; color: var(--muted); font-size: 13px; border-top:
     <h2>Run it yourself</h2>
     <p class="sub">Runs on a laptop: about 1.2 GB peak RAM, 4 CPU threads, and around 25 MB of data. No GPU or cloud needed.</p>
 <pre><span class="c"># clone, install into a local virtualenv, run the full story (~40 s)</span>
-git clone https://github.com/aditib03/batchsleuth.git && cd batchsleuth
+git clone https://github.com/aditib03/RegressionTrace.git && cd RegressionTrace
 make setup
 make demo
 <span class="c"># interactive API docs at http://127.0.0.1:8000/docs</span>
@@ -256,7 +256,7 @@ make serve
 make bench</pre>
   </section>
 </div>
-<footer><div class="wrap">BatchSleuth · MIT licensed · Numbers on this page are loaded from <a href="data/demo.json">demo.json</a> and <a href="data/benchmark.json">benchmark.json</a>, produced by <code>scripts/export_site.py</code>.</div></footer>
+<footer><div class="wrap">RegressionTrace · MIT licensed · Numbers on this page are loaded from <a href="data/demo.json">demo.json</a> and <a href="data/benchmark.json">benchmark.json</a>, produced by <code>scripts/export_site.py</code>.</div></footer>
 <div class="tip" id="tip" role="tooltip"></div>
 
 <script>
